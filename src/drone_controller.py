@@ -25,7 +25,7 @@ COMMAND_PERIOD = 100 #ms
 
 
 class BasicDroneController(object):
-	def __init__(self):
+	 def __init__(self):
 		# Holds the current drone status
 		self.status = -1
 
