@@ -17,6 +17,13 @@ from drone_video_display import DroneVideoDisplay
 from PySide import QtCore, QtGui
 
 
+# Navigation Vehicle Coordinates
+
+
+# Waypoint
+
+
+
 # Here we define the keyboard map for our controller (note that python has no enums, so we use a class)
 class KeyMapping(object):
 	PitchForward     = QtCore.Qt.Key.Key_E
@@ -71,14 +78,14 @@ class KeyboardController(DroneVideoDisplay):
 
 					wayPointMode = 0
 
-			elif key == KeyMapping.Waypoint | wayPointMode == 1:
+			elif (key == KeyMapping.Waypoint) or (wayPointMode == 1):
 
 					self.yaw_velocity = 0
 
 
 
 
-					self.pitch = 1
+					self.pitch = 10
 
 
 
