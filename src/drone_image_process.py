@@ -63,27 +63,27 @@ class DroneImageProcess(object):
 	    self.imageLock.acquire()
 	    self.navdataLock.acquire()
 	    try:
-		# Convert your ROS Image message to OpenCV2
-		cv2_img = CvBridge.imgmsg_to_cv2(self.image, "bgr8")
+			# Convert your ROS Image message to OpenCV2
+			cv2_img = CvBridge.imgmsg_to_cv2(self.image, "bgr8")
 	    except CvBridgeError, e:
-		print(e)
-	    else:
-		gray = cv2.cvtColor(cv2_img,cv2.COLOR_BGR2GRAY)
-		gray = np.float32(gray)
-		dst = cv2.cornerHarris(gray, 2, 3, 0.04)
-		# Save accepted image as a jpeg 
-		if np.count_nonzero(dst[32:(dst.shape[0]-32), 24:(dst.shape[1]-24)] > 0.01*dst.max()) > OBJ_THRESH && self.navdata > ALT_THRESH:
-		    self.navfixLock.acquire()
-			cv2.imwrite('saved_images/img_%03d.jpeg' % self.imageCount, cv2_img)
-			self.imageCount += 1
-			bag = rosbag.Bag('navfixes.bag', 'a')
-			try:
-			    # bag.write('navdata_gps_lat', self.navfix.latitude)
-			    # bag.write('navdata_gps_long', self.navfix.longitude)
-			    bag.write('battery', self.navdata.batteryPercent)
-			finally:
-			    bag.close()
-			    self.navfixLock.release()
+			print(e)
+		else:
+			gray = cv2.cvtColor(cv2_img,cv2.COLOR_BGR2GRAY)
+			gray = np.float32(gray)
+			dst = cv2.cornerHarris(gray, 2, 3, 0.04)
+			# Save accepted image as a jpeg
+			if np.count_nonzero(dst[32:(dst.shape[0]-32), 24:(dst.shape[1]-24)] > 0.01*dst.max()) > OBJ_THRESH and self.navdata > ALT_THRESH:
+				self.navfixLock.acquire()
+				cv2.imwrite('saved_images/img_%03d.jpeg' % self.imageCount, cv2_img)
+				self.imageCount += 1
+				bag = rosbag.Bag('navfixes.bag', 'a')
+				try:
+					# bag.write('navdata_gps_lat', self.navfix.latitude)
+					# bag.write('navdata_gps_long', self.navfix.longitude)
+					bag.write('battery', self.navdata.batteryPercent)
+				finally:
+					bag.close()
+					self.navfixLock.release()
 	    finally:
 		self.navdataLock.release()
 		self.imageLock.release()

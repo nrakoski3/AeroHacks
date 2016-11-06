@@ -17,6 +17,7 @@ import numpy as np
 from drone_controller import BasicDroneController
 from drone_video_display import DroneVideoDisplay
 from drone_lane_detect import DroneLaneDetect
+from drone_image_process import DroneImageProcess
 
 # Finally the GUI libraries
 from PySide import QtCore, QtGui
@@ -64,7 +65,7 @@ class KeyboardController(DroneVideoDisplay):
         self.posToWpMag = math.sqrt((self.wp[0] - self.pos[0]) ** 2 + (self.wp[1] - self.pos[1]) ** 2)
         self.wpVec = [(self.wp[0] - self.pos[0]) / self.posToWpMag, (self.wp[1] - self.pos[1]) / self.posToWpMag]
         if self.wpVec[0] != 0:
-            if (self.wpVec[0] < 0 and self.wpVec[1] < 0) | (self.wpVec[0] < 0 and self.wpVec[1] > 0)
+            if (self.wpVec[0] < 0 and self.wpVec[1] < 0) | (self.wpVec[0] < 0 and self.wpVec[1] > 0):
                 self.wpAng = math.atan(self.wpVec[1] / self.wpVec[0]) * 180 / math.pi +180
             elif self.wpVec[0] < 0 and self.wpVec[1] ==0:
                 self.wpAng = 180
@@ -84,7 +85,7 @@ class KeyboardController(DroneVideoDisplay):
         self.positionTimer.start(UPDATE_PERIOD)
         
         self.ImageTimer = QtCore.QTimer(self)
-		self.ImageTimer.timeout.connect(self.LaneCorrection)
+	    self.ImageTimer.timeout.connect(self.LaneCorrection)
 		self.ImageTimer.start(PING_INTERVAL)
 
     # We add a keyboard handler to the DroneVideoDisplay to react to keypresses
@@ -220,6 +221,7 @@ if __name__ == '__main__':
     # Now we construct our Qt Application and associated controllers and windows
     app = QtGui.QApplication(sys.argv)
     controller = BasicDroneController()
+    imager = DroneImageProcess()
     display = KeyboardController()
 
     display.show()
