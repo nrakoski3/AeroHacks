@@ -50,15 +50,15 @@ class BasicDroneController(object):
 	def ReceiveNavdata(self,navdata):
 		# Although there is a lot of data in this packet, we're only interested in the state at the moment	
 		self.status = navdata.state
-		self.status = navdata.rotX
-		self.status = navdata.rotY
-		self.status = navdata.rotZ
-		self.status = navdata.vx
-		self.status = navdata.vy
-		self.status = navdata.vz
-		self.status = navdata.ax
-		self.status = navdata.ay
-		self.status = navdata.az
+		self.rotX = navdata.rotX
+		self.rotY = navdata.rotY
+		self.rotZ = navdata.rotZ
+		self.vx = navdata.vx
+		self.vy = navdata.vy
+		self.vz = navdata.vz
+		self.ax = navdata.ax
+		self.ay = navdata.ay
+		self.az = navdata.az
 
 	def SendTakeoff(self):
 		# Send a takeoff message to the ardrone driver
