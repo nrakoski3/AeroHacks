@@ -63,7 +63,17 @@ class KeyboardController(DroneVideoDisplay):
         self.wp = [20, 0]
         self.posToWpMag = math.sqrt((self.wp[0] - self.pos[0]) ** 2 + (self.wp[1] - self.pos[1]) ** 2)
         self.wpVec = [(self.wp[0] - self.pos[0]) / self.posToWpMag, (self.wp[1] - self.pos[1]) / self.posToWpMag]
-        self.wpAng = math.atan(self.wpVec[1] / self.wpVec[0]) * 180 / math.pi
+        if self.wpVec[0] != 0:
+            if (self.wpVec[0] < 0 and self.wpVec[1] < 0) | (self.wpVec[0] < 0 and self.wpVec[1] > 0)
+                self.wpAng = math.atan(self.wpVec[1] / self.wpVec[0]) * 180 / math.pi +180
+            else:
+                self.wpAng = math.atan(self.wpVec[1] / self.wpVec[0]) * 180 / math.pi
+        elif self.wpVec[1] > 0:
+            self.wpAng = 90
+        elif self.wpVec[1] ==0:
+            self.wpAng = 0
+        else:
+            self.wpAng = -90
 		self.laneDetector = DroneLaneDetect()
 		self.PosLock = Lock()
 		
@@ -79,7 +89,7 @@ class KeyboardController(DroneVideoDisplay):
     def keyPressEvent(self, event):
         key = event.key()
         # If we have constructed the drone controller and the key is not generated from an auto-repeating key
-        if controller is not None and not event.isAutoRepeat():
+        if (self.posToWpMag < 1) or (controller is not None and not event.isAutoRepeat()):
             # Handle the important cases first!
             if key == KeyMapping.Emergency:
                 controller.SendEmergency()
@@ -106,13 +116,13 @@ class KeyboardController(DroneVideoDisplay):
 				else:
 					self.yaw_velocity = 0
 
-				if abs(self.posToWpMag * cos(self.rotZ - self.wpAng)) > 1:
-					self.pitch = 10
+				if math.cos((self.rotZ - self.wpAng) * math.pi/180) > 0:
+					self.pitch = 10 * math.cos((self.rotZ - self.wpAng) * math.pi/180)
 				else:
 					self.pitch = 0
 
-				if abs(self.posToWpMag * sin(self.rotZ - self.wpAng)) > 0:
-					self.roll = KYAW * self.posToWpMag * sin(self.rotZ - self.wpAng)
+				if abs(self.posToWpMag * math.sin((self.rotZ - self.wpAng) * math.pi/180)) > 0.1:
+					self.roll = KYAW * self.posToWpMag * sin((self.rotZ - self.wpAng))
 				else:
 					self.roll = 0
 
