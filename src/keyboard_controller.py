@@ -30,7 +30,8 @@ class KeyMapping(object):
 	Takeoff          = QtCore.Qt.Key.Key_Y
 	Land             = QtCore.Qt.Key.Key_H
 	Emergency        = QtCore.Qt.Key.Key_Space
-
+	Waypoint         = QtCore.Qt.Key.Key_N
+	Hover            = QtCore.Qt.Key.Key_M
 
 # Our controller definition, note that we extend the DroneVideoDisplay class
 class KeyboardController(DroneVideoDisplay):
@@ -45,6 +46,8 @@ class KeyboardController(DroneVideoDisplay):
 # We add a keyboard handler to the DroneVideoDisplay to react to keypresses
 	def keyPressEvent(self, event):
 		key = event.key()
+		#NEW
+		wayPointMode = 0
 
 		# If we have constructed the drone controller and the key is not generated from an auto-repeating key
 		if controller is not None and not event.isAutoRepeat():
@@ -55,6 +58,41 @@ class KeyboardController(DroneVideoDisplay):
 				controller.SendTakeoff()
 			elif key == KeyMapping.Land:
 				controller.SendLand()
+			#NEW
+			elif key == KeyMapping.Hover:
+
+					self.yaw_velocity = 0
+
+					self.pitch = 0
+
+					self.roll = 0
+
+					self.z_velocity = 0
+
+					wayPointMode = 0
+
+			elif key == KeyMapping.Waypoint | wayPointMode == 1:
+
+					self.yaw_velocity = 0
+
+
+
+
+					self.pitch = 1
+
+
+
+
+					self.roll = 0
+
+
+
+
+
+
+					self.z_velocity = 0
+
+					wayPointMode = 1
 			else:
 				# Now we handle moving, notice that this section is the opposite (+=) of the keyrelease section
 				if key == KeyMapping.YawLeft:
