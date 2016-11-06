@@ -71,7 +71,7 @@ class DroneImageProcess(object):
 				gray = np.float32(gray)
 				dst = cv2.cornerHarris(gray, 2, 3, 0.04)
 				# Save accepted image as a jpeg 
-				if np.count_nonzero(dst[32:(dst.shape[0]-32), 24:(dst.shape[1]-24)] > 0.01*dst.max()) > OBJ_THRESH && self.navdata > ALT_THRESH:
+				if (np.count_nonzero(dst[32:(dst.shape[0]-32), 24:(dst.shape[1]-24)] > 0.01*dst.max()) > OBJ_THRESH) and (self.navdata > ALT_THRESH):
 					self.navfixLock.acquire()
 					cv2.imwrite('saved_images/img_%03d.jpeg' % self.imageCount, cv2_img)
 					self.imageCount += 1
@@ -92,10 +92,10 @@ class DroneImageProcess(object):
 		try:
 			self.navfix = navdata # Record the navdata to be saved if image is good
 		finally:
-			self.navdataLock.release()
+			self.navfixLock.release()
     
     def ReceiveNavData(self, navdata):
-		self.navfixLock.acquire()
+		self.navdataLock.acquire()
 		try:
 			self.navdata = navdata # Record the navdata to be saved if image is good
 		finally:
