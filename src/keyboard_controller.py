@@ -66,6 +66,8 @@ class KeyboardController(DroneVideoDisplay):
         if self.wpVec[0] != 0:
             if (self.wpVec[0] < 0 and self.wpVec[1] < 0) | (self.wpVec[0] < 0 and self.wpVec[1] > 0)
                 self.wpAng = math.atan(self.wpVec[1] / self.wpVec[0]) * 180 / math.pi +180
+            elif self.wpVec[0] < 0 and self.wpVec[1] ==0:
+                self.wpAng = 180
             else:
                 self.wpAng = math.atan(self.wpVec[1] / self.wpVec[0]) * 180 / math.pi
         elif self.wpVec[1] > 0:
