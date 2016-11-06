@@ -9,12 +9,14 @@
 import roslib; roslib.load_manifest('ardrone_tutorials')
 import rospy
 import math
+from threading import Lock
 
 import numpy as np
 
 # Load the DroneController class, which handles interactions with the drone, and the DroneVideoDisplay class, which handles video display
 from drone_controller import BasicDroneController
 from drone_video_display import DroneVideoDisplay
+from drone_lane_detect import DroneLaneDetect
 
 # Finally the GUI libraries
 from PySide import QtCore, QtGui
@@ -27,7 +29,7 @@ print 'wpVec: %d %d' % (str(wpVec[0]), str(wpVec[1]))
 KYAW = .1
 
 UPDATE_PERIOD = 100 #ms
-
+PING_INTERVAL = 250 #ms
 
 # Here we define the keyboard map for our controller (note that python has no enums, so we use a class)
 class KeyMapping(object):
@@ -56,16 +58,22 @@ class KeyboardController(DroneVideoDisplay):
         self.yaw_velocity = 0
         self.z_velocity = 0
         self.wayPointMode = 0
-
+		
         self.pos = [0, 0]
         self.wp = [20, 0]
         self.posToWpMag = math.sqrt((self.wp[0] - self.pos[0]) ** 2 + (self.wp[1] - self.pos[1]) ** 2)
         self.wpVec = [(self.wp[0] - self.pos[0]) / self.posToWpMag, (self.wp[1] - self.pos[1]) / self.posToWpMag]
         self.wpAng = math.atan(self.wpVec[1] / self.wpVec[0]) * 180 / math.pi
-
+		self.laneDetector = DroneLaneDetect()
+		self.PosLock = Lock()
+		
         self.positionTimer = QtCore.QTimer(self)
         self.positionTimer.timeout.connect(self.PosUpdateCallback)
         self.positionTimer.start(UPDATE_PERIOD)
+        
+        self.ImageTimer = QtCore.QTimer(self)
+		self.ImageTimer.timeout.connect(self.LaneCorrection)
+		self.ImageTimer.start(PING_INTERVAL)
 
     # We add a keyboard handler to the DroneVideoDisplay to react to keypresses
     def keyPressEvent(self, event):
@@ -91,26 +99,28 @@ class KeyboardController(DroneVideoDisplay):
                 self.wayPointMode = 0
 
         elif (key == KeyMapping.Waypoint) or (self.wayPointMode == 1):
+			self.PosLock.acquire()
+			try:
+				if abs(self.rotZ - self.wpAng) > 1:
+					self.yaw_velocity = KYAW * (self.rotZ - selfwpAng)
+				else:
+					self.yaw_velocity = 0
 
-            if abs(self.rotZ - self.wpAng) > 1:
-                self.yaw_velocity = KYAW * (self.rotZ - selfwpAng)
-            else:
-                self.yaw_velocity = 0
+				if abs(self.posToWpMag * cos(self.rotZ - self.wpAng)) > 1:
+					self.pitch = 10
+				else:
+					self.pitch = 0
 
-            if abs(self.posToWpMag * cos(self.rotZ - self.wpAng)) > 1:
-                self.pitch = 10
-            else:
-                self.pitch = 0
+				if abs(self.posToWpMag * sin(self.rotZ - self.wpAng)) > 0:
+					self.roll = KYAW * self.posToWpMag * sin(self.rotZ - self.wpAng)
+				else:
+					self.roll = 0
 
-            if abs(self.posToWpMag * sin(self.rotZ - self.wpAng)) > 0:
-                self.roll = KYAW * self.posToWpMag * sin(self.rotZ - self.wpAng)
-            else:
-                self.roll = 0
+				self.z_velocity = 0
 
-            self.z_velocity = 0
-
-            self.wayPointMode = 1
-
+				self.wayPointMode = 1
+			finally:
+				self.PosLock.release()
         else:
 
             # Now we handle moving, notice that this section is the opposite (+=) of the keyrelease section
@@ -168,11 +178,25 @@ class KeyboardController(DroneVideoDisplay):
             controller.SetCommand(self.roll, self.pitch, self.yaw_velocity, self.z_velocity)
 
     def PosUpdateCallBack(self):
-        self.pos[0] = self.pos[0] + .1 * self.vx/1000 * cos(self.rotZ) - .1 * self.vy/1000 * sin(self.rotZ)
-        self.pos[1] = self.pos[1] + .1 * self.vy/1000 * sin(self.rotZ) + .1 * self.vx/1000 * cos(self.rotZ)
-        self.posToWpMag = math.sqrt((self.wp[0] - self.pos[0]) ** 2 + (self.wp[1] - self.pos[1]) ** 2)
-        self.wpVec = [(self.wp[0] - self.pos[0]) / self.posToWpMag, (self.wp[1] - self.pos[1]) / self.posToWpMag]
-        self.wpAng = math.atan(self.wpVec[1] / self.wpVec[0]) * 180 / math.pi
+        self.PosLock.acquire()
+        try:
+			self.pos[0] = self.pos[0] + .1 * self.vx/1000 * cos(self.rotZ) - .1 * self.vy/1000 * sin(self.rotZ)
+			self.pos[1] = self.pos[1] + .1 * self.vy/1000 * sin(self.rotZ) + .1 * self.vx/1000 * cos(self.rotZ)
+			self.posToWpMag = math.sqrt((self.wp[0] - self.pos[0]) ** 2 + (self.wp[1] - self.pos[1]) ** 2)
+			self.wpVec = [(self.wp[0] - self.pos[0]) / self.posToWpMag, (self.wp[1] - self.pos[1]) / self.posToWpMag]
+			self.wpAng = math.atan(self.wpVec[1] / self.wpVec[0]) * 180 / math.pi
+		finally:
+			self.PosLock.release()
+
+	def LaneCorrection(self):
+		self.laneDetector.PosLock.acquire()
+		self.PosLock.acquire()
+		try:
+			self.wpAng -= self.laneDetector.heading
+			self.pos[0] += self.laneDetector.offset_from_tz_string
+		finally:
+			self.PosLock.release()
+			self.lanedetector.PosLock.release()
 
 # Setup the application
 if __name__ == '__main__':
