@@ -8,14 +8,18 @@ import rosbag
 
 from sensor_msgs.msg import Image
 from ardrone_autonomy.msg import Navdata
-from ardrone_autonomy.msg import navdata_gps
+# from ardrone_autonomy.msg import navdata_gps
 
 from PySide import QtCore
 import numpy as np
 import cv2
 
-IMAGE_INTERVAL = 500 #ms
-ALT_THRESH = 1000 #mm
+# An enumeration of Drone Statuses
+from drone_status import DroneStatus
+
+IMAGE_INTERVAL = 800 #ms
+ALT_THRESH = 1000 	#mm
+OBJ_THRESH = 10 	# A threshold for number of corners to count as a obstacle
 
 class DroneImageProcess(object):
     def __init__(self):
@@ -33,11 +37,11 @@ class DroneImageProcess(object):
 		self.imgTimer.start(IMAGE_INTERVAL)
 		
 		# Subscribe to the /ardrone/navdata topic
-		self.subNavSat = rospy.Subscriber('ardrone/navdata_gps', navdata_gps, self.ReceiveNavSat) 
+		# self.subNavSat = rospy.Subscriber('ardrone/navdata_gps', navdata_gps, self.ReceiveNavSat) 
 		
 		# Holds the nav location to be saved if surface feature is found
-		self.navfix = None
-		self.navfixLock = Lock()
+		# self.navfix = None
+		# self.navfixLock = Lock()
 		
 		# Subscribe to the /ardrone/navdata topic
 		self.subNavData = rospy.Subscriber('ardrone/navdata', Navdata, self.ReceiveNavData) 
@@ -54,30 +58,34 @@ class DroneImageProcess(object):
 			self.imageLock.release()
     
     def ProcessImages(self):
-    	self.imageLock.acquire()
-    	self.navdataLock.acquire()
-		try:
-			# Convert your ROS Image message to OpenCV2
-			cv2_img = bridge.imgmsg_to_cv2(self.image, "bgr8")
-		except CvBridgeError, e:
-			print(e)
-		else:
-			edges = cv2.Canny(cv2_img, 150, 220)
-			# Save accepted image as a jpeg 
-			if np.any(edges[10:(edges.shape[0]-10), 10:(edges.shape[1]-10)] > 10) && self.navdata > ALT_THRESH:
-				self.navfixLock.acquire()
-				cv2.imwrite('saved_images/img_%03d.jpeg' % self.imageCount, cv2_img)
-				self.imageCount += 1
-				bag = rosbag.Bag('navfixes.bag', 'a')
-				try:
-					bag.write('navdata_gps_lat', self.navfix.latitude)
-					bag.write('navdata_gps_long', self.navfix.longitude)
-				finally:
-					bag.close()
-					self.navfixLock.release()
-		finally:
-			self.navdataLock.release()
-			self.imageLock.release()
+    	if self.navdata.state == DroneStatus.Flying:
+			self.imageLock.acquire()
+			self.navdataLock.acquire()
+			try:
+				# Convert your ROS Image message to OpenCV2
+				cv2_img = bridge.imgmsg_to_cv2(self.image, "bgr8")
+			except CvBridgeError, e:
+				print(e)
+			else:
+				gray = cv2.cvtColor(cv2_img,cv2.COLOR_BGR2GRAY)
+				gray = np.float32(gray)
+				dst = cv2.cornerHarris(gray, 2, 3, 0.04)
+				# Save accepted image as a jpeg 
+				if np.count_nonzero(dst[32:(dst.shape[0]-32), 24:(dst.shape[1]-24)] > 0.01*dst.max()) > OBJ_THRESH && self.navdata > ALT_THRESH:
+					self.navfixLock.acquire()
+					cv2.imwrite('saved_images/img_%03d.jpeg' % self.imageCount, cv2_img)
+					self.imageCount += 1
+					bag = rosbag.Bag('navfixes.bag', 'a')
+					try:
+						# bag.write('navdata_gps_lat', self.navfix.latitude)
+						# bag.write('navdata_gps_long', self.navfix.longitude)
+						bag.write('battery', self.navdata.batteryPercent)
+					finally:
+						bag.close()
+						self.navfixLock.release()
+			finally:
+				self.navdataLock.release()
+				self.imageLock.release()
 
 	def ReceiveNavSat(self, navdata):
 		self.navfixLock.acquire()
