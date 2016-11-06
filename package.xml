@@ -1,0 +1,11 @@
+<package>
+    <name>AeroHacks</name>
+    <version>1.0.0</version>
+    <description>
+        AeroHacks Nov 2016
+    </description>
+    <maintainer email="mail@mail.com">Natalie Rakoski</maintainer>
+    
+    <license>BSD</license>
+    <url>http://github.com/nrakoski3/AeroHacks</url>
+</package>
