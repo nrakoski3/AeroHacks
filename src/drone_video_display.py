@@ -135,7 +135,7 @@ class DroneVideoDisplay(QtGui.QMainWindow):
 			self.imageLock.release()
 
 	def ReceiveNavdata(self,navdata):
-		# Indicate that new data has been received (thus we are connected)
+		# Indicate that new data has been receiStatusved (thus we are connected)
 		self.communicationSinceTimer = True
 
 		# Update the message to be displayed
